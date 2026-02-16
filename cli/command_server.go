@@ -37,10 +37,11 @@ func (c *serverFlags) setup(svc appServices, cmd *kingpin.CmdClause) {
 }
 
 type serverClientFlags struct {
-	serverAddress         string
-	serverUsername        string
-	serverPassword        string
-	serverCertFingerprint string
+	serverAddress          string
+	serverUsername         string
+	serverPassword         string
+	serverPasswordFilePath string
+	serverCertFingerprint  string
 }
 
 func (c *serverClientFlags) setup(svc appServices, cmd *kingpin.CmdClause) {
@@ -49,6 +50,7 @@ func (c *serverClientFlags) setup(svc appServices, cmd *kingpin.CmdClause) {
 	cmd.Flag("address", "Address of the server to connect to").Envar(svc.EnvName("KOPIA_SERVER_ADDRESS")).Default("http://127.0.0.1:51515").StringVar(&c.serverAddress)
 	cmd.Flag("server-control-username", "Server control username").Envar(svc.EnvName("KOPIA_SERVER_USERNAME")).StringVar(&c.serverUsername)
 	cmd.Flag("server-control-password", "Server control password").PlaceHolder("PASSWORD").Envar(svc.EnvName("KOPIA_SERVER_PASSWORD")).StringVar(&c.serverPassword)
+	cmd.Flag("server-cli-api-password-file", "Server control password filepPath").PlaceHolder("PASSWORD_FILEPATH").Envar(svc.EnvName("KOPIA_SERVER_CLI__API_PASSWORD_FILE")).StringVar(&c.serverPasswordFilePath)
 
 	// aliases for backwards compat
 	cmd.Flag("server-username", "Server control username").Hidden().StringVar(&c.serverUsername)
@@ -85,6 +87,7 @@ func (c *serverClientFlags) serverAPIClientOptions() (apiclient.Options, error) 
 		BaseURL:                             c.serverAddress,
 		Username:                            c.serverUsername,
 		Password:                            c.serverPassword,
+		PasswordFilePath:                    c.serverPasswordFilePath,
 		TrustedServerCertificateFingerprint: c.serverCertFingerprint,
 	}, nil
 }

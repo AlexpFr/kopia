@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	net_url "net/url"
+	"os"
 	"regexp"
 	"strings"
 
@@ -197,8 +198,9 @@ func decodeResponse(resp *http.Response, respPayload any) error {
 type Options struct {
 	BaseURL string
 
-	Username string
-	Password string
+	Username         string
+	Password         string
+	PasswordFilePath string
 
 	TrustedServerCertificateFingerprint string
 
@@ -231,8 +233,22 @@ func NewKopiaAPIClient(options Options) (*KopiaAPIClient, error) {
 	}
 
 	// wrap with a round-tripper that provides basic authentication
-	if options.Username != "" || options.Password != "" {
-		transport = basicAuthTransport{transport, options.Username, options.Password}
+	if options.Username != "" || options.Password != "" || options.PasswordFilePath != "" {
+		var password string = ""
+		switch {
+		case options.Password != "":
+			// password provided via --server-control-password flag or KOPIA_SERVER_PASSWORD environment variable
+			password = options.Password
+		case options.PasswordFilePath != "":
+			// password provided via --server-cli-api-password-file flag or KOPIA_SERVER_CLI__API_PASSWORD_FILEE environment variable
+			passwordFileData, err := os.ReadFile(options.PasswordFilePath)
+			if err != nil {
+				return nil, errors.Wrapf(err, "cannot read password from file %q", options.PasswordFilePath)
+			}
+			password = strings.TrimSpace(string(passwordFileData))
+		}
+
+		transport = basicAuthTransport{transport, options.Username, password}
 	}
 
 	if options.LogRequests {
