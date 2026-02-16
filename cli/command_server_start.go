@@ -48,9 +48,10 @@ type commandServerStart struct {
 	serverStartRandomPassword  bool
 	serverStartHtpasswdFile    string
 
-	randomServerControlPassword bool
-	serverControlUsername       string
-	serverControlPassword       string
+	randomServerControlPassword   bool
+	serverControlUsername         string
+	serverControlPassword         string
+	serverControlPasswordFilePath string
 
 	serverAuthCookieSingingKey string
 
@@ -101,6 +102,7 @@ func (c *commandServerStart) setup(svc advancedAppServices, parent commandParent
 	cmd.Flag("random-server-control-password", "Generate random server control password and print to stderr").Hidden().BoolVar(&c.randomServerControlPassword)
 	cmd.Flag("server-control-username", "Server control username").Default(defaultServerControlUsername).Envar(svc.EnvName("KOPIA_SERVER_CONTROL_USER")).StringVar(&c.serverControlUsername)
 	cmd.Flag("server-control-password", "Server control password").PlaceHolder("PASSWORD").Envar(svc.EnvName("KOPIA_SERVER_CONTROL_PASSWORD")).StringVar(&c.serverControlPassword)
+	cmd.Flag("server-cfg-api-password-file", "Server control password filePath").PlaceHolder("PASSWORD_FILEPATH").Envar(svc.EnvName("KOPIA_SERVER_CFG__API_PASSWORD_FILE")).StringVar(&c.serverControlPasswordFilePath)
 
 	cmd.Flag("auth-cookie-signing-key", "Force particular auth cookie signing key").Envar(svc.EnvName("KOPIA_AUTH_COOKIE_SIGNING_KEY")).Hidden().StringVar(&c.serverAuthCookieSingingKey)
 	cmd.Flag("log-scheduler", "Enable logging of scheduler actions").Hidden().Default("true").BoolVar(&c.debugScheduler)
@@ -350,6 +352,15 @@ func (c *commandServerStart) getAuthenticator(ctx context.Context) (auth.Authent
 	case c.sf.serverPassword != "":
 		authenticators = append(authenticators, auth.AuthenticateSingleUser(c.sf.serverUsername, c.sf.serverPassword))
 
+	case c.sf.serverUiPasswordFilePath != "":
+		// password provided via --sserver-cfg-ui-password-file flag or KOPIA_SERVER_CFG__UI_PASSWORD_FILE environment variable
+		passwordFileData, err := os.ReadFile(c.sf.serverUiPasswordFilePath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot read password from file %q", c.sf.serverUiPasswordFilePath)
+		}
+		trimedPasswordFileData := strings.TrimSpace(string(passwordFileData))
+		authenticators = append(authenticators, auth.AuthenticateSingleUser(c.sf.serverUsername, trimedPasswordFileData))
+
 	case c.serverStartRandomPassword:
 		// generate very long random one-time password
 		b := make([]byte, serverRandomPasswordLength)
@@ -367,6 +378,15 @@ func (c *commandServerStart) getAuthenticator(ctx context.Context) (auth.Authent
 	switch {
 	case c.serverControlPassword != "":
 		authenticators = append(authenticators, auth.AuthenticateSingleUser(c.serverControlUsername, c.serverControlPassword))
+
+	case c.serverControlPasswordFilePath != "":
+		// password provided via --sserver-cfg-api-password-file flag or KOPIA_SERVER_CFG__API_PASSWORD_FILE environment variable
+		passwordFileData, err := os.ReadFile(c.serverControlPasswordFilePath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot read password from file %q", c.serverControlPasswordFilePath)
+		}
+		trimedPasswordFileData := strings.TrimSpace(string(passwordFileData))
+		authenticators = append(authenticators, auth.AuthenticateSingleUser(c.serverControlUsername, trimedPasswordFileData))
 
 	case c.randomServerControlPassword:
 		// generate very long random one-time password

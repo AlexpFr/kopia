@@ -23,15 +23,17 @@ type commandServer struct {
 }
 
 type serverFlags struct {
-	serverAddress  string
-	serverUsername string
-	serverPassword string
+	serverAddress            string
+	serverUsername           string
+	serverPassword           string
+	serverUiPasswordFilePath string
 }
 
 func (c *serverFlags) setup(svc appServices, cmd *kingpin.CmdClause) {
 	cmd.Flag("address", "Server address").Default("http://127.0.0.1:51515").StringVar(&c.serverAddress)
 	cmd.Flag("server-username", "HTTP server username (basic auth)").Envar(svc.EnvName("KOPIA_SERVER_USERNAME")).Default("kopia").StringVar(&c.serverUsername)
 	cmd.Flag("server-password", "HTTP server password (basic auth)").Envar(svc.EnvName("KOPIA_SERVER_PASSWORD")).StringVar(&c.serverPassword)
+	cmd.Flag("server-cfg-ui-password-file", "HTTP server password filePath (basic auth)").Envar(svc.EnvName("KOPIA_SERVER_CFG__UI_PASSWORD_FILE")).StringVar(&c.serverUiPasswordFilePath)
 }
 
 type serverClientFlags struct {

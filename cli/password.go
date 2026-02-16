@@ -73,6 +73,13 @@ func (c *App) getPasswordFromFlags(ctx context.Context, isCreate, allowPersisten
 	case c.password != "":
 		// password provided via --password flag or KOPIA_PASSWORD environment variable
 		return strings.TrimSpace(c.password), nil
+	case c.passwordFilePath != "":
+		// password provided via --server-cfg-repo-password-file flag or KOPIA_SERVER_CFG__REPO_PASSWORD_FILE environment variable
+		passwordFileData, err := os.ReadFile(c.passwordFilePath)
+		if err != nil {
+			return "", errors.Wrapf(err, "cannot read password from file %q", c.passwordFilePath)
+		}
+		return strings.TrimSpace(string(passwordFileData)), nil
 	case isCreate:
 		// this is a new repository, ask for password
 		return askForNewRepositoryPassword(c.stdoutWriter)
